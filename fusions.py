@@ -76,11 +76,11 @@ def load_bam(bam_path):
     for read in bam:
         qname.append(read.query_name)
         flag.append(read.flag)
-        rname.append(read.reference_id)
+        rname.append(read.reference_name)
         pos.append(read.pos)
         mapq.append(read.mapping_quality)
         cigar.append(read.cigarstring)
-        rnext.append(read.next_reference_id)
+        rnext.append(read.next_reference_name)
         pnext.append(read.next_reference_start)
         tlen.append(read.template_length)
         seq.append(read.query_sequence)
@@ -151,16 +151,6 @@ rois.strand_y = rois.strand_y.str.replace('-', '1', regex = True)
 # Load BAM
 bam = load_bam(bam_path)
 
-# Filter readthroughs
-#   Removes readthroughs within 1 Mb by filtering out results with an rnext of '=' (same
-#   chromosome) and a distance between 'pos' and 'pnext' of <=1000000
-bam_filter = (bam.rnext == '=') & (abs(bam.pos - bam.pnext <= 1000000))
-bam.drop(bam[bam_filter].index, inplace = True)
-
-# Rename '=' values in 'rnext' to corresponding chromosome in 'rname'
-bam_rename = bam[bam.rnext == '=']
-bam.loc[bam_rename.index, 'rnext'] = bam.rname[bam_rename.index]
-
 # Strandedness
 #   Formats flag to binary and pulls strand values (str[7] is mate reverse strand, str[8]
 #   is read reverse strand). 0 is + and 1 is -.
@@ -193,6 +183,16 @@ bam.pos = pd.to_numeric(bam.pos)
 bam.pnext = pd.to_numeric(bam.pnext)
 bam.flag = pd.to_numeric(bam.flag)
 bam.mapq = pd.to_numeric(bam.mapq)
+
+# Filter readthroughs
+#   Removes readthroughs within 1 Mb by filtering out results with an rnext of '=' (same
+#   chromosome) and a distance between 'pos' and 'pnext' of <=1000000
+bam_filter = (bam.rname == bam.rnext) & (abs(bam.pos - bam.pnext <= 1000000))
+bam.drop(bam[bam_filter].index, inplace = True)
+
+# Fix issue where supplementary alignment rows don't have a mateq (set to 1000 for identification)
+bam.loc[bam.mateq == 'NA', 'mateq'] = 1000
+bam.mateq = pd.to_numeric(bam.mateq)
 
 # Pull relevant results
 #   Iterates through rows of rois and pulls rows with appropriate chromosome locations,
