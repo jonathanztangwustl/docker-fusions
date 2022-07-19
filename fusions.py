@@ -84,7 +84,7 @@ def load_bam(bam_path):
         pnext.append(read.next_reference_start)
         tlen.append(read.template_length)
         seq.append(read.query_sequence)
-        qual.append(read.query_name)
+        qual.append(read.query_qualities)
         if (read.has_tag('SA')):
             sa.append(read.get_tag('SA'))
         else:
