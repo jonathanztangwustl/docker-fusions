@@ -77,14 +77,14 @@ def load_bam(bam_path):
         qname.append(read.query_name)
         flag.append(read.flag)
         rname.append(read.reference_name)
-        pos.append(read.pos)
+        pos.append(read.reference_start)
         mapq.append(read.mapping_quality)
         cigar.append(read.cigarstring)
         rnext.append(read.next_reference_name)
         pnext.append(read.next_reference_start)
         tlen.append(read.template_length)
         seq.append(read.query_sequence)
-        qual.append(read.query_qualities)
+        qual.append(read.qual)
         if (read.has_tag('SA')):
             sa.append(read.get_tag('SA'))
         else:
@@ -156,8 +156,8 @@ bam = load_bam(bam_path)
 #   is read reverse strand). 0 is + and 1 is -.
 binflags = pd.DataFrame([format(i, '013b') for i in bam.flag])
 binflags.set_index(bam.index, inplace = True)
-bam['strand1'] = binflags[0].str[7]
-bam['strand2'] = binflags[0].str[8]
+bam['strand1'] = binflags[0].str[-5]
+bam['strand2'] = binflags[0].str[-6]
 
 # Supplemental alignments
 #   Splits sa column to list, returns to the bam, and explodes the list so that each
@@ -179,10 +179,10 @@ supp_align_df.set_index(supp_align.index, inplace = True)
 
 #   Updates bam with SA dataframe and fixes some types.
 bam.update(supp_align_df, overwrite = True)
-bam.pos = pd.to_numeric(bam.pos)
-bam.pnext = pd.to_numeric(bam.pnext)
-bam.flag = pd.to_numeric(bam.flag)
-bam.mapq = pd.to_numeric(bam.mapq)
+bam.pos = pd.to_numeric(bam.pos, downcast = 'integer')
+bam.pnext = pd.to_numeric(bam.pnext, downcast = 'integer')
+bam.flag = pd.to_numeric(bam.flag, downcast = 'integer')
+bam.mapq = pd.to_numeric(bam.mapq, downcast = 'integer')
 
 # Filter readthroughs
 #   Removes readthroughs within 1 Mb by filtering out results with an rnext of '=' (same
@@ -192,7 +192,7 @@ bam.drop(bam[bam_filter].index, inplace = True)
 
 # Fix issue where supplementary alignment rows don't have a mateq (set to 1000 for identification)
 bam.loc[bam.mateq == 'NA', 'mateq'] = 1000
-bam.mateq = pd.to_numeric(bam.mateq)
+bam.mateq = pd.to_numeric(bam.mateq, downcast = 'integer')
 
 # Pull relevant results
 #   Iterates through rows of rois and pulls rows with appropriate chromosome locations,
